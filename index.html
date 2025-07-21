@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malayalam Movie Buff - AI Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Teko:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .cinematic-title {
+            font-family: 'Teko', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .dialogue-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .option-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .correct {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+        }
+        .incorrect {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+        }
+        /* Modal and Loader styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #1f2937; /* bg-gray-800 */
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #facc15; /* yellow-400 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div id="game-container" class="w-full max-w-2xl mx-auto">
+        
+        <header class="text-center mb-8">
+            <h1 class="cinematic-title text-4xl sm:text-5xl md:text-6xl font-bold text-yellow-400 tracking-wider">സിനിമാ പ്രാന്തൻ</h1>
+            <p class="text-gray-400 text-base sm:text-lg mt-1">The Ultimate Dialogue Challenge!</p>
+            <p class="text-gray-500 text-sm mt-2">created by Sujith</p>
+        </header>
+
+        <main id="quiz-area" class="bg-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl dialogue-card">
+            <div id="question-container" class="mb-6">
+                <p class="text-gray-300 text-sm mb-2">Dialogue:</p>
+                <blockquote class="text-xl sm:text-2xl md:text-3xl font-semibold text-center text-white leading-relaxed" id="dialogue-text"></blockquote>
+            </div>
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div id="feedback-container" class="mt-6 text-center h-12 flex items-center justify-center">
+                 <p id="feedback-text" class="text-lg sm:text-xl font-bold"></p>
+            </div>
+            <div class="mt-4 flex justify-between items-center">
+                 <p class="text-base sm:text-lg font-semibold">Score: <span id="score">0</span></p>
+                 <div>
+                    <button id="trivia-btn" class="hidden bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm sm:text-base hover:bg-blue-400 transition-colors duration-200 mr-2">Get Trivia ✨</button>
+                    <button id="next-btn" class="hidden bg-yellow-500 text-gray-900 font-bold py-2 px-6 rounded-lg text-base sm:text-lg hover:bg-yellow-400 transition-colors duration-200">Next →</button>
+                 </div>
+            </div>
+        </main>
+
+        <footer id="end-screen" class="hidden text-center mt-8">
+            <h2 class="text-3xl sm:text-4xl font-bold text-yellow-400">Game Over!</h2>
+            <p class="text-lg sm:text-xl mt-2">Your final score is <span id="final-score" class="font-bold text-xl sm:text-2xl"></span></p>
+            <button id="restart-btn" class="mt-6 bg-yellow-500 text-gray-900 font-bold py-3 px-8 rounded-lg text-base sm:text-lg hover:bg-yellow-400 transition-colors duration-200">Play Again</button>
+            <button id="restart-ai-btn" class="mt-4 bg-purple-600 text-white font-bold py-3 px-8 rounded-lg text-base sm:text-lg hover:bg-purple-500 transition-colors duration-200">Play a Fresh Round ✨</button>
+        </footer>
+    </div>
+
+    <!-- Modal for Trivia and Loading -->
+    <div id="modal" class="modal-backdrop hidden">
+        <div id="modal-content" class="modal-content">
+            <!-- Loader -->
+            <div id="loader" class="hidden mx-auto">
+                <div class="loader"></div>
+                <p class="text-center mt-4 text-gray-300">Generating...</p>
+            </div>
+            <!-- Trivia Content -->
+            <div id="trivia-content">
+                <h3 class="text-2xl font-bold text-yellow-400 mb-4">Movie Trivia ✨</h3>
+                <p id="trivia-text" class="text-gray-200"></p>
+                <button id="close-modal-btn" class="mt-6 w-full bg-yellow-500 text-gray-900 font-bold py-2 rounded-lg hover:bg-yellow-400">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Default Game Data ---
+            const defaultQuestions = [
+                { dialogue: "പോ മോനേ ദിനേശാ...", options: ["Narasimham", "Aaraam Thampuran", "The King", "Ravanaprabhu"], answer: "Narasimham" },
+                { dialogue: "ഇപ്പൊ ശരിയാക്കിത്തരാം!", options: ["Vellanakalude Nadu", "Mukunthetta Sumitra Vilikkunnu", "Akkare Akkare Akkare", "Nadodikkattu"], answer: "Vellanakalude Nadu" },
+                { dialogue: "വിടമാട്ടേൻ... എന്നെ നീ വിടമാട്ടേൻ!", options: ["Manichithrathazhu", "Thenmavin Kombath", "Kaalapani", "Guru"], answer: "Manichithrathazhu" },
+                { dialogue: "ഇത് എന്റെ പുത്തൻ റെയ്ബാൻ ഗ്ലാസ്‌... ഇതിലെങ്ങാനും തൊട്ടാൽ...", options: ["Spadikam", "The King", "Dhruvam", "Irupatham Noottandu"], answer: "Spadikam" },
+                { dialogue: "കത്തി താഴെയിടെടാ... നിന്റെ അച്ഛനാടാ പറയുന്നത്!", options: ["Kireedam", "Chenkol", "Devasuram", "Bharatham"], answer: "Kireedam" },
+                { dialogue: "സാഗർ... സാഗർ ഏലിയാസ് ജാക്കി. മറക്കില്ലല്ലോ ഈ മുഖം?", options: ["Irupatham Noottandu", "Sagar Alias Jacky", "Abhimanyu", "Aryan"], answer: "Irupatham Noottandu" },
+                { dialogue: "ഗഫൂർ കാ ദോസ്ത്", options: ["Pattanapravesham", "Nadodikkattu", "Akkare Akkare Akkare", "Varavelpu"], answer: "Nadodikkattu" },
+                { dialogue: "ഓർമ്മകൾ ഒരു ചാക്ക് കണക്കെയാണ്... എത്ര കുടഞ്ഞിട്ടാലും അതിൽ കുറച്ചു മണ്ണ് തങ്ങി നിൽക്കും.", options: ["Drishyam", "Bhramaram", "Thanmathra", "Munthirivallikal Thalirkkumbol"], answer: "Drishyam" },
+                { dialogue: "ശംഭോ മഹാദേവാ...", options: ["Aaraam Thampuran", "Narasimham", "Ravanaprabhu", "Praja"], answer: "Aaraam Thampuran" },
+                { dialogue: "കുട്ടിമാമ... ഞാൻ ഞെട്ടി മാമ...", options: ["Yodha", "Kilukkam", "Minnaram", "In Harihar Nagar"], answer: "Yodha" }
+            ];
+
+            // --- DOM Elements ---
+            const dialogueText = document.getElementById('dialogue-text');
+            const optionsContainer = document.getElementById('options-container');
+            const feedbackText = document.getElementById('feedback-text');
+            const nextBtn = document.getElementById('next-btn');
+            const scoreEl = document.getElementById('score');
+            const quizArea = document.getElementById('quiz-area');
+            const endScreen = document.getElementById('end-screen');
+            const finalScoreEl = document.getElementById('final-score');
+            const restartBtn = document.getElementById('restart-btn');
+            const restartAiBtn = document.getElementById('restart-ai-btn');
+            const triviaBtn = document.getElementById('trivia-btn');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const loader = document.getElementById('loader');
+            const triviaContent = document.getElementById('trivia-content');
+            const triviaText = document.getElementById('trivia-text');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+
+            // --- Game State ---
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let questions = [];
+
+            // --- Gemini API Functions ---
+            const API_KEY = ""; // Leave blank, will be handled by the environment
+
+            async function callGemini(prompt, schema) {
+                showLoader(schema ? "Generating new quiz..." : "Fetching trivia...");
+                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+                
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }]
+                };
+
+                if (schema) {
+                    payload.generationConfig = {
+                        responseMimeType: "application/json",
+                        responseSchema: schema
+                    };
+                }
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("No content generated.");
+                    }
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    return null; // Return null on failure
+                } finally {
+                    hideLoader();
+                }
+            }
+
+            async function generateAIQuestions() {
+                const prompt = `Generate an array of 8 unique multiple-choice quiz questions about famous Malayalam movie dialogues. Ensure the dialogues are from a variety of well-known movies and actors. The answer must be the movie title. Provide four options for each question.`;
+                const schema = {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            dialogue: { type: "STRING" },
+                            options: { type: "ARRAY", items: { type: "STRING" } },
+                            answer: { type: "STRING" }
+                        },
+                        required: ["dialogue", "options", "answer"]
+                    }
+                };
+
+                const resultText = await callGemini(prompt, schema);
+                if (resultText) {
+                    try {
+                        const newQuestions = JSON.parse(resultText);
+                        startGame(newQuestions);
+                    } catch (e) {
+                        console.error("Failed to parse AI-generated questions:", e);
+                        showTriviaModal("Sorry, I couldn't generate a new quiz. Please try again.", "Error");
+                    }
+                } else {
+                    showTriviaModal("Sorry, I couldn't generate a new quiz. Please try again.", "Error");
+                }
+            }
+
+            async function getMovieTrivia() {
+                const movieName = questions[currentQuestionIndex].answer;
+                const prompt = `Tell me one short, interesting, and fun piece of trivia about the Malayalam movie "${movieName}". Keep it to 2-3 sentences.`;
+                const trivia = await callGemini(prompt);
+                if (trivia) {
+                    showTriviaModal(trivia);
+                } else {
+                    showTriviaModal("Sorry, I couldn't fetch trivia for this movie right now.", "Error");
+                }
+            }
+
+            // --- UI Functions ---
+            function showLoader(message = "Generating...") {
+                loader.querySelector('p').textContent = message;
+                triviaContent.classList.add('hidden');
+                loader.classList.remove('hidden');
+                modal.classList.remove('hidden');
+            }
+
+            function hideLoader() {
+                modal.classList.add('hidden');
+                loader.classList.add('hidden');
+            }
+
+            function showTriviaModal(text, title = "Movie Trivia ✨") {
+                triviaText.textContent = text;
+                triviaContent.querySelector('h3').textContent = title;
+                loader.classList.add('hidden');
+                triviaContent.classList.remove('hidden');
+                modal.classList.remove('hidden');
+            }
+
+            // --- Game Logic ---
+            function startGame(questionSet = defaultQuestions) {
+                currentQuestionIndex = 0;
+                score = 0;
+                questions = [...questionSet].sort(() => Math.random() - 0.5);
+                scoreEl.textContent = score;
+                endScreen.classList.add('hidden');
+                quizArea.classList.remove('hidden');
+                loadQuestion();
+            }
+
+            function loadQuestion() {
+                feedbackText.textContent = '';
+                nextBtn.classList.add('hidden');
+                triviaBtn.classList.add('hidden');
+                optionsContainer.innerHTML = '';
+
+                const currentQuestion = questions[currentQuestionIndex];
+                dialogueText.textContent = currentQuestion.dialogue;
+
+                currentQuestion.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.classList.add('option-btn', 'w-full', 'bg-gray-700', 'p-4', 'rounded-lg', 'text-base', 'sm:text-lg', 'hover:bg-gray-600', 'border-2', 'border-transparent');
+                    button.onclick = () => selectAnswer(button, option);
+                    optionsContainer.appendChild(button);
+                });
+            }
+
+            function selectAnswer(selectedButton, selectedOption) {
+                const currentQuestion = questions[currentQuestionIndex];
+                const isCorrect = selectedOption === currentQuestion.answer;
+
+                Array.from(optionsContainer.children).forEach(btn => {
+                    btn.disabled = true;
+                    if (btn.textContent === currentQuestion.answer) {
+                        btn.classList.add('correct');
+                    }
+                });
+
+                if (isCorrect) {
+                    score++;
+                    scoreEl.textContent = score;
+                    feedbackText.textContent = "Correct!";
+                    feedbackText.classList.add('text-green-400');
+                    feedbackText.classList.remove('text-red-400');
+                } else {
+                    selectedButton.classList.add('incorrect');
+                    feedbackText.textContent = "Wrong!";
+                    feedbackText.classList.add('text-red-400');
+                    feedbackText.classList.remove('text-green-400');
+                }
+
+                nextBtn.classList.remove('hidden');
+                triviaBtn.classList.remove('hidden');
+            }
+
+            function handleNextQuestion() {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
+                    loadQuestion();
+                } else {
+                    showEndScreen();
+                }
+            }
+            
+            function showEndScreen() {
+                quizArea.classList.add('hidden');
+                endScreen.classList.remove('hidden');
+                finalScoreEl.textContent = `${score} / ${questions.length}`;
+            }
+
+            // --- Event Listeners ---
+            nextBtn.addEventListener('click', handleNextQuestion);
+            restartBtn.addEventListener('click', () => startGame(defaultQuestions));
+            restartAiBtn.addEventListener('click', generateAIQuestions);
+            triviaBtn.addEventListener('click', getMovieTrivia);
+            closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+
+            // --- Initial Game Start ---
+            startGame();
+        });
+    </script>
+</body>
+</html>
