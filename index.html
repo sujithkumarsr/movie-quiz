@@ -109,15 +109,12 @@
         </footer>
     </div>
 
-    <!-- Modal for Trivia and Loading -->
     <div id="modal" class="modal-backdrop hidden">
         <div id="modal-content" class="modal-content">
-            <!-- Loader -->
             <div id="loader" class="hidden mx-auto">
                 <div class="loader"></div>
-                <p class="text-center mt-4 text-gray-300">Generating...</p>
+                <p id="loader-text" class="text-center mt-4 text-gray-300">Generating...</p>
             </div>
-            <!-- Trivia Content -->
             <div id="trivia-content">
                 <h3 class="text-2xl font-bold text-yellow-400 mb-4">Movie Trivia ✨</h3>
                 <p id="trivia-text" class="text-gray-200"></p>
@@ -155,8 +152,8 @@
             const restartAiBtn = document.getElementById('restart-ai-btn');
             const triviaBtn = document.getElementById('trivia-btn');
             const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
             const loader = document.getElementById('loader');
+            const loaderText = document.getElementById('loader-text');
             const triviaContent = document.getElementById('trivia-content');
             const triviaText = document.getElementById('trivia-text');
             const closeModalBtn = document.getElementById('close-modal-btn');
@@ -171,7 +168,8 @@
 
             async function callGemini(prompt, schema) {
                 showLoader(schema ? "Generating new quiz..." : "Fetching trivia...");
-                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+                // FIXED: Updated model name to a valid one
+                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
                 
                 const payload = {
                     contents: [{ role: "user", parts: [{ text: prompt }] }]
@@ -192,6 +190,8 @@
                     });
 
                     if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("API Error Response:", errorData);
                         throw new Error(`API Error: ${response.statusText}`);
                     }
                     
@@ -211,7 +211,7 @@
             }
 
             async function generateAIQuestions() {
-                const prompt = `Generate an array of 8 unique multiple-choice quiz questions about famous Malayalam movie dialogues. Ensure the dialogues are from a variety of well-known movies and actors. The answer must be the movie title. Provide four options for each question.`;
+                const prompt = `Generate an array of 8 unique multiple-choice quiz questions about famous Malayalam movie dialogues. Ensure the dialogues are from a variety of well-known movies and actors. The answer must be the movie title. Provide four options for each question, where one is the correct movie title.`;
                 const schema = {
                     type: "ARRAY",
                     items: {
@@ -235,44 +235,18 @@
                         showTriviaModal("Sorry, I couldn't generate a new quiz. Please try again.", "Error");
                     }
                 } else {
-                    showTriviaModal("Sorry, I couldn't generate a new quiz. Please try again.", "Error");
+                    showTriviaModal("Sorry, the API key is missing or invalid. Please check your setup.", "API Error");
                 }
             }
 
             // Shuffle function (Fisher-Yates)
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
             }
-        }
-      
-            // Function to display a question
-        function displayQuestion() {
-            resetState();
-            const questionData = questions[currentQuestionIndex];
             
-            questionEl.textContent = questionData.question;
-            progressEl.textContent = `Question ${currentQuestionIndex + 1} / ${questions.length}`;
-
-            // --- THIS IS THE KEY PART ---
-            // Combine, shuffle, and display answers
-            const correctAnswer = questionData.correct_answer;
-            const incorrectAnswers = questionData.incorrect_answers;
-            let allAnswers = [correctAnswer, ...incorrectAnswers];
-            
-            shuffleArray(allAnswers); // Shuffle the answers
-
-            // Create buttons from the shuffled list
-            allAnswers.forEach(answer => {
-                const button = document.createElement('button');
-                button.textContent = answer;
-                button.classList.add('btn', 'w-full', 'p-3', 'text-left', 'border', 'border-gray-300', 'rounded-lg', 'bg-white', 'hover:bg-gray-50');
-                button.addEventListener('click', selectAnswer);
-                answersEl.appendChild(button);
-            });
-        }
-          
             async function getMovieTrivia() {
                 const movieName = questions[currentQuestionIndex].answer;
                 const prompt = `Tell me one short, interesting, and fun piece of trivia about the Malayalam movie "${movieName}". Keep it to 2-3 sentences.`;
@@ -286,7 +260,8 @@
 
             // --- UI Functions ---
             function showLoader(message = "Generating...") {
-                loader.querySelector('p').textContent = message;
+                // FIXED: Using ID for robust selection
+                loaderText.textContent = message;
                 triviaContent.classList.add('hidden');
                 loader.classList.remove('hidden');
                 modal.classList.remove('hidden');
@@ -309,7 +284,9 @@
             function startGame(questionSet = defaultQuestions) {
                 currentQuestionIndex = 0;
                 score = 0;
-                questions = [...questionSet].sort(() => Math.random() - 0.5);
+                questions = [...questionSet];
+                // FIXED: Using the robust shuffleArray function
+                shuffleArray(questions); 
                 scoreEl.textContent = score;
                 endScreen.classList.add('hidden');
                 quizArea.classList.remove('hidden');
@@ -324,8 +301,11 @@
 
                 const currentQuestion = questions[currentQuestionIndex];
                 dialogueText.textContent = currentQuestion.dialogue;
+                
+                const shuffledOptions = [...currentQuestion.options];
+                shuffleArray(shuffledOptions);
 
-                currentQuestion.options.forEach(option => {
+                shuffledOptions.forEach(option => {
                     const button = document.createElement('button');
                     button.textContent = option;
                     button.classList.add('option-btn', 'w-full', 'bg-gray-700', 'p-4', 'rounded-lg', 'text-base', 'sm:text-lg', 'hover:bg-gray-600', 'border-2', 'border-transparent');
