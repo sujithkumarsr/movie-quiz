@@ -1,1 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Naadan Kitchen by Sujith</title>
+    <style>
+        /* --- Basic Setup & Typography --- */
+        :root {
+            --primary-bg: #fdfaf3;      /* Warm off-white */
+            --secondary-bg: #f4f1e9;    /* Slightly darker cream for sidebar */
+            --text-color: #3d352e;      /* Dark brown for text */
+            --accent-color: #c0392b;     /* Rich chili-red for titles */
+            --border-color: #e0d9c6;    /* Light tan for borders */
+            --interactive-color: #4caf50; /* Green for buttons */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* --- Main App Layout --- */
+        .app-container {
+            display: flex;
+            flex-direction: column; /* Stack sidebar on top for mobile */
+            min-height: 100vh;
+        }
+
+        .recipe-sidebar {
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-bottom: 2px solid var(--border-color); /* Bottom border for mobile */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .recipe-content {
+            flex-grow: 1;
+            padding: 20px 40px;
+            overflow-y: auto;
+        }
+
+        /* --- Header & Sidebar Styling --- */
+        .recipe-sidebar header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .recipe-sidebar header h1 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+
+        .recipe-sidebar header p {
+            margin: 5px 0 15px 0;
+            font-style: italic;
+            color: #555;
+        }
+
+        .recipe-list-item {
+            padding: 12px 15px;
+            margin: 8px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s ease-in-out;
+            border: 1px solid transparent;
+        }
+
+        .recipe-list-item:hover {
+            background-color: var(--border-color);
+        }
+
+        .recipe-list-item.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: #a03024;
+        }
+
+        /* --- Recipe Content Styling --- */
+        .recipe-card {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .recipe-card h2 {
+            color: var(--accent-color);
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .recipe-card img {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .recipe-card h3 {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        
+        .initial-message {
+            text-align: center;
+            padding: 50px;
+            color: #777;
+        }
+
+        /* --- Interactive Elements --- */
+        .servings-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .serving-scaler {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        li input[type="checkbox"] {
+            margin-right: 10px;
+            min-width: 18px;
+            min-height: 18px;
+            accent-color: var(--interactive-color);
+        }
+        
+        li.completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        
+        /* --- Responsive Design --- */
+        @media (min-width: 768px) {
+            .app-container {
+                flex-direction: row; /* Side-by-side on larger screens */
+            }
+            .recipe-sidebar {
+                width: 320px;
+                min-height: 100vh;
+                border-right: 2px solid var(--border-color);
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar for Recipe List -->
+        <aside class="recipe-sidebar">
+            <div>
+                <header>
+                    <h1>My Naadan Kitchen 🌶️</h1>
+                    <p><strong>Created by Sujith</strong></p>
+                </header>
+                <nav id="recipe-list"></nav>
+            </div>
+        </aside>
+
+        <!-- Main Content for Displaying the Recipe -->
+        <main class="recipe-content" id="recipe-display">
+            <div class="initial-message">
+                <h2>Select a recipe to begin!</h2>
+                <p>Choose one of the delicious Kerala dishes from the list on the left.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- DATA: RECIPES ---
+        const recipes = [
+            { id: 1, name: "Puttu and Kadala Curry", imageURL: "https://placehold.co/800x400/c0392b/ffffff?text=Puttu+%26+Kadala", servings: 4, ingredients: [ { name: "Black Chickpeas (Kadala)", quantity: 1, unit: "cup" }, { name: "Onion, chopped", quantity: 1, unit: "" }, { name: "Tomato, chopped", quantity: 1, unit: "" }, { name: "Grated Coconut", quantity: 0.5, unit: "cup" }, { name: "Puttu Podi (Rice Flour)", quantity: 2, unit: "cups" } ], method: [ "Soak the kadala overnight and pressure cook until soft.", "Sauté onions, tomatoes, and spices to make the curry base.", "Add the cooked kadala and coconut milk. Simmer.", "Mix puttu podi with water and salt until it has a crumbly texture.", "Layer the rice flour and grated coconut in a puttu maker and steam for 10-15 minutes." ] },
+            { id: 2, name: "Avial", imageURL: "https://placehold.co/800x400/27ae60/ffffff?text=Avial", servings: 4, ingredients: [ { name: "Mixed Vegetables, cubed", quantity: 2, unit: "cups" }, { name: "Grated Coconut", quantity: 1, unit: "cup" }, { name: "Yogurt (Curd), sour", quantity: 0.5, unit: "cup" }, { name: "Green Chillies", quantity: 4, unit: "" }, { name: "Coconut Oil", quantity: 2, unit: "tbsp" } ], method: [ "Cook the mixed vegetables with turmeric powder and salt until tender.", "Grind coconut and green chillies into a coarse paste.", "Add the coconut paste to the cooked vegetables and mix well.", "Whisk the yogurt and add it to the mixture. Cook on low heat.", "Finish by drizzling fresh coconut oil and adding curry leaves." ] },
+            { id: 3, name: "Kerala Fish Curry", imageURL: "https://placehold.co/800x400/e67e22/ffffff?text=Meen+Curry", servings: 4, ingredients: [ { name: "Fish (Kingfish/Seer Fish)", quantity: 500, unit: "g" }, { name: "Kudampuli (Fish Tamarind)", quantity: 3, unit: "pieces" }, { name: "Shallots (Cheriya Ulli)", quantity: 1, unit: "cup" }, { name: "Ginger-Garlic Paste", quantity: 1, unit: "tbsp" }, { name: "Kashmiri Chilli Powder", quantity: 2, unit: "tbsp" } ], method: [ "Soak kudampuli in half a cup of warm water.", "Heat coconut oil and sauté shallots, ginger-garlic paste until fragrant.", "Add chilli powder, turmeric, and other spices. Cook for a minute.", "Add the kudampuli water and more water to form a gravy. Bring to a boil.", "Gently place the fish pieces in the gravy and simmer until the fish is cooked." ] },
+            { id: 4, name: "Sambar", imageURL: "https://placehold.co/800x400/f1c40f/ffffff?text=Sambar", servings: 6, ingredients: [ { name: "Toor Dal", quantity: 1, unit: "cup" }, { name: "Mixed Vegetables (Drumstick, Carrot)", quantity: 2, unit: "cups" }, { name: "Tamarind", quantity: 1, unit: "small ball" }, { name: "Sambar Powder", quantity: 3, unit: "tbsp" }, { name: "Mustard Seeds", quantity: 1, unit: "tsp" } ], method: [ "Pressure cook the toor dal with turmeric until mushy.", "Cook the vegetables separately until tender.", "Soak tamarind in hot water and extract the juice.", "Combine cooked dal, vegetables, tamarind juice, and sambar powder. Boil for 10 minutes.", "Prepare tempering (tadka) with mustard seeds, red chillies, and curry leaves. Pour over the sambar." ] },
+            { id: 5, name: "Cabbage Thoran", imageURL: "https://placehold.co/800x400/2ecc71/ffffff?text=Cabbage+Thoran", servings: 4, ingredients: [ { name: "Cabbage, finely shredded", quantity: 1, unit: "medium" }, { name: "Grated Coconut", quantity: 1, unit: "cup" }, { name: "Green Chillies, slit", quantity: 3, unit: "" }, { name: "Mustard Seeds", quantity: 1, unit: "tsp" }, { name: "Turmeric Powder", quantity: 0.5, unit: "tsp" } ], method: [ "Heat coconut oil in a pan and splutter the mustard seeds.", "Add the shredded cabbage, green chillies, turmeric powder, and salt. Mix well.", "Cover and cook on low heat for about 5-7 minutes until the cabbage is tender.", "Add the grated coconut and mix everything together. Cook for another 2 minutes.", "Serve hot as a side dish." ] }
+        ];
+
+        // --- DOM Elements ---
+        const recipeListContainer = document.getElementById('recipe-list');
+        const recipeDisplayContainer = document.getElementById('recipe-display');
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Populates the sidebar with recipe names from the data.
+         */
+        function populateRecipeList() {
+            recipeListContainer.innerHTML = ''; // Clear existing list
+            recipes.forEach(recipe => {
+                const item = document.createElement('div');
+                item.className = 'recipe-list-item';
+                item.textContent = recipe.name;
+                item.dataset.recipeId = recipe.id; // Store id for easy access
+                item.onclick = () => {
+                    displayRecipe(recipe.id);
+                };
+                recipeListContainer.appendChild(item);
+            });
+        }
+
+        /**
+         * Displays the full details of a selected recipe.
+         * @param {number} recipeId - The ID of the recipe to display.
+         */
+        function displayRecipe(recipeId) {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            // Update active class in sidebar
+            document.querySelectorAll('.recipe-list-item').forEach(item => {
+                item.classList.toggle('active', parseInt(item.dataset.recipeId) === recipeId);
+            });
+            
+            // Generate HTML for ingredients and method steps
+            const ingredientsHTML = recipe.ingredients.map((ing, index) =>
+                `<li data-index="${index}">
+                    <input type="checkbox" class="checklist-item">
+                    <span class="ingredient-text">${ing.quantity} ${ing.unit} ${ing.name}</span>
+                </li>`
+            ).join('');
+
+            const methodHTML = recipe.method.map((step, index) =>
+                `<li data-index="${index}">
+                    <input type="checkbox" class="checklist-item method-step">
+                    <span>${step}</span>
+                </li>`
+            ).join('');
+
+            // Set the main content area with the recipe card
+            recipeDisplayContainer.innerHTML = `
+                <div class="recipe-card">
+                    <h2>${recipe.name}</h2>
+                    <img src="${recipe.imageURL}" alt="${recipe.name}" onerror="this.src='https://placehold.co/800x400/cccccc/ffffff?text=Image+Not+Found'">
+                    
+                    <h3>Ingredients</h3>
+                    <div class="servings-control">
+                        <label for="serving-scaler">Servings:</label>
+                        <input type="number" id="serving-scaler" value="${recipe.servings}" min="1" class="serving-scaler">
+                    </div>
+                    <ul class="ingredient-list">${ingredientsHTML}</ul>
+                    
+                    <h3>Method</h3>
+                    <ol class="method-list">${methodHTML}</ol>
+                </div>
+            `;
+
+            // Add event listeners for the newly created interactive elements
+            addChecklistListeners();
+            addServingScalerListener(recipe);
+        }
+
+        /**
+         * Adds event listeners to all checkboxes for interactive feedback.
+         */
+        function addChecklistListeners() {
+            const allCheckboxes = document.querySelectorAll('.checklist-item');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.onchange = (event) => {
+                    // Toggle a 'completed' class on the parent <li>
+                    event.target.closest('li').classList.toggle('completed', event.target.checked);
+                };
+            });
+        }
+
+        /**
+         * Adds the listener for the serving scaler input.
+         * @param {object} recipe - The currently displayed recipe object.
+         */
+        function addServingScalerListener(recipe) {
+            const scaler = document.getElementById('serving-scaler');
+            scaler.addEventListener('change', () => {
+                const newServings = parseInt(scaler.value);
+                if (isNaN(newServings) || newServings < 1) {
+                    scaler.value = recipe.servings; // Reset if invalid
+                    return;
+                }
+                
+                const factor = newServings / recipe.servings;
+                
+                // Update ingredient quantities in the UI
+                const ingredientElements = document.querySelectorAll('.ingredient-list li');
+                ingredientElements.forEach(li => {
+                    const index = li.dataset.index;
+                    const originalIngredient = recipe.ingredients[index];
+                    let newQuantity = originalIngredient.quantity * factor;
+                    
+                    // Round to 2 decimal places if not a whole number
+                    newQuantity = Math.round(newQuantity * 100) / 100;
+
+                    const textElement = li.querySelector('.ingredient-text');
+                    textElement.textContent = `${newQuantity} ${originalIngredient.unit} ${originalIngredient.name}`;
+                });
+            });
+        }
+
+        // --- INITIALIZE THE APP ---
+        window.onload = () => {
+            populateRecipeList();
+        };
+    </script>
+</body>
+</html>
 
